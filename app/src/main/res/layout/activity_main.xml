@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/textTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="100dp"
+        android:text="TravelTdea"
+        android:textSize="34sp"
+        android:textStyle="bold"
+        android:textColor="#3F51B5" />
+
+    <TextView
+        android:id="@+id/textDescription"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/textTitle"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="20dp"
+        android:text="Tu aplicación de navegación"
+        android:textSize="18sp" />
+
+    <Button
+        android:id="@+id/btnStartNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/textDescription"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="100dp"
+        android:background="@color/colorPrimary"
+        android:text="Comenzar Navegación"
+        android:textColor="#FFFFFF" />
+
+</RelativeLayout>
