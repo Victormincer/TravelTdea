@@ -37,5 +37,21 @@
         android:background="@color/colorPrimary"
         android:text="Comenzar Navegación"
         android:textColor="#FFFFFF" />
+    <EditText
+        android:id="@+id/emailEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Email"
+        android:inputType="textEmailAddress" />
+
+    <EditText
+        android:id="@+id/passwordEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Password"
+        android:layout_below="@id/emailEditText"
+        android:layout_marginTop="16dp"
+        android:inputType="textPassword" />
+
 
 </RelativeLayout>
