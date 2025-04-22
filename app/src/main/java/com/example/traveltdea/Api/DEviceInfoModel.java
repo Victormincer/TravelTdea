@@ -1,4 +1,4 @@
-package com.example.traveltdea;
+package com.example.traveltdea.Api;
 
 public class DEviceInfoModel {
     private String deviceId;

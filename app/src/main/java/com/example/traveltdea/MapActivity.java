@@ -1,9 +1,5 @@
 package com.example.traveltdea;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -12,10 +8,25 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.HttpUrl;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
@@ -28,6 +39,7 @@ import org.osmdroid.views.overlay.compass.InternalCompassOrientationProvider;
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider;
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -35,6 +47,7 @@ import java.util.Random;
 public class MapActivity extends AppCompatActivity implements LocationListener {
 
     private static final int PERMISSION_REQUEST_CODE = 100;
+
     private MapView mapView;
     private MyLocationNewOverlay locationOverlay;
     private IMapController mapController;
@@ -45,76 +58,54 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
     private Polyline routePolyline;
     private GeoPoint currentLocation;
     private GeoPoint destinationPoint;
+    private boolean isFirstLocation = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Configurar osmdroid
         Context ctx = getApplicationContext();
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
 
         setContentView(R.layout.activity_map);
 
-        // Solicitar permisos de ubicación
         requestLocationPermissions();
 
-        // Inicializar el mapa
         mapView = findViewById(R.id.mapView);
         mapView.setTileSource(TileSourceFactory.MAPNIK);
         mapView.setMultiTouchControls(true);
         mapView.setBuiltInZoomControls(true);
 
-        // Configurar el controlador del mapa
         mapController = mapView.getController();
         mapController.setZoom(15.0);
 
-        // Configurar la capa de ubicación
         locationOverlay = new MyLocationNewOverlay(new GpsMyLocationProvider(this), mapView);
         locationOverlay.enableMyLocation();
         locationOverlay.enableFollowLocation();
-        locationOverlay.setOptionsMenuEnabled(true);
         mapView.getOverlays().add(locationOverlay);
 
-        // Agregar brújula
         CompassOverlay compassOverlay = new CompassOverlay(this, new InternalCompassOrientationProvider(this), mapView);
         compassOverlay.enableCompass();
         mapView.getOverlays().add(compassOverlay);
 
-        // Inicializar botones
         btnCalculateRoute = findViewById(R.id.btnCalculateRoute);
         btnAddDestination = findViewById(R.id.btnAddDestination);
 
-        // Inicializar Polyline para la ruta
         routePolyline = new Polyline();
-        routePolyline.setColor(0xFF0000FF); // Color azul
+        routePolyline.setColor(0xFF0000FF);
         routePolyline.setWidth(10f);
         mapView.getOverlays().add(routePolyline);
 
-        // Configurar listeners de botones
-        btnAddDestination.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                addRandomDestination();
-            }
-        });
+        btnAddDestination.setOnClickListener(v -> addRandomDestination());
+        btnCalculateRoute.setOnClickListener(v -> calculateRoute());
 
-        btnCalculateRoute.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                calculateRoute();
-            }
-        });
-
-        // Inicializar LocationManager
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
     }
 
     private void requestLocationPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{
-                    Manifest.permission.ACCESS_FINE_LOCATION,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    Manifest.permission.ACCESS_FINE_LOCATION
             }, PERMISSION_REQUEST_CODE);
         } else {
             startLocationUpdates();
@@ -134,7 +125,7 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
     }
 
     private void startLocationUpdates() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (locationManager != null && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 10, this);
         }
     }
@@ -145,28 +136,23 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
             return;
         }
 
-        // Crear un punto de destino aleatorio cerca de la ubicación actual
         Random random = new Random();
-        double latOffset = (random.nextDouble() - 0.5) * 0.05; // Aproximadamente 5km
+        double latOffset = (random.nextDouble() - 0.5) * 0.05;
         double lonOffset = (random.nextDouble() - 0.5) * 0.05;
 
         destinationPoint = new GeoPoint(
                 currentLocation.getLatitude() + latOffset,
                 currentLocation.getLongitude() + lonOffset);
 
-        // Limpiar marcador anterior si existe
         if (destinationMarker != null) {
             mapView.getOverlays().remove(destinationMarker);
         }
 
-        // Agregar nuevo marcador
         destinationMarker = new Marker(mapView);
         destinationMarker.setPosition(destinationPoint);
         destinationMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
         destinationMarker.setTitle("Destino");
         mapView.getOverlays().add(destinationMarker);
-
-        // Actualizar el mapa
         mapView.invalidate();
 
         Toast.makeText(this, "Destino añadido", Toast.LENGTH_SHORT).show();
@@ -178,60 +164,100 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
             return;
         }
 
-        // En una app real, aquí se haría una llamada a una API de enrutamiento
-        // Para este ejemplo, solo simularemos una ruta con algunos puntos intermedios
+        OkHttpClient client = new OkHttpClient();
+        String apiKey = "c4b2c2c4-c2fe-4d0c-bf1f-140e90757e67"; // Reemplaza con tu clave
+        String baseUrl = "https://graphhopper.com/api/1/route";
 
-        List<GeoPoint> routePoints = new ArrayList<>();
-        routePoints.add(currentLocation);
+        HttpUrl.Builder urlBuilder = HttpUrl.parse(baseUrl).newBuilder();
+        urlBuilder.addQueryParameter("point", currentLocation.getLatitude() + "," + currentLocation.getLongitude());
+        urlBuilder.addQueryParameter("point", destinationPoint.getLatitude() + "," + destinationPoint.getLongitude());
+        urlBuilder.addQueryParameter("vehicle", "car");
+        urlBuilder.addQueryParameter("locale", "es");
+        urlBuilder.addQueryParameter("instructions", "true");
+        urlBuilder.addQueryParameter("points_encoded", "false");
+        urlBuilder.addQueryParameter("key", apiKey);
 
-        // Crear algunos puntos intermedios para simular una ruta
-        int steps = 10;
-        for (int i = 1; i < steps; i++) {
-            double lat = currentLocation.getLatitude() + ((destinationPoint.getLatitude() - currentLocation.getLatitude()) * i / steps);
-            double lon = currentLocation.getLongitude() + ((destinationPoint.getLongitude() - currentLocation.getLongitude()) * i / steps);
+        String url = urlBuilder.build().toString();
 
-            // Agregar algo de variación para que no sea una línea recta
-            if (i > 1 && i < steps - 1) {
-                Random random = new Random();
-                lat += (random.nextDouble() - 0.5) * 0.01;
-                lon += (random.nextDouble() - 0.5) * 0.01;
+        Request request = new Request.Builder().url(url).build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Error al calcular la ruta: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
 
-            routePoints.add(new GeoPoint(lat, lon));
-        }
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    String responseData = response.body().string();
+                    try {
+                        JSONObject jsonResponse = new JSONObject(responseData);
+                        JSONArray paths = jsonResponse.getJSONArray("paths");
 
-        routePoints.add(destinationPoint);
+                        if (paths.length() > 0) {
+                            JSONObject path = paths.getJSONObject(0);
+                            double distance = path.getDouble("distance");
+                            double time = path.getDouble("time");
 
-        // Actualizar polyline
-        routePolyline.setPoints(routePoints);
+                            JSONObject pointsJson = path.getJSONObject("points");
+                            JSONArray coordinates = pointsJson.getJSONArray("coordinates");
 
-        // Actualizar el mapa
-        mapView.invalidate();
+                            List<GeoPoint> decodedPath = decodePolyline(coordinates);
 
-        Toast.makeText(this, "Ruta calculada", Toast.LENGTH_SHORT).show();
+                            runOnUiThread(() -> {
+                                drawRouteOnMap(decodedPath);
+                                String info = String.format("Distancia: %.1f km, Tiempo: %.1f min", distance / 1000, time / 60000);
+                                Toast.makeText(getApplicationContext(), info, Toast.LENGTH_LONG).show();
+                            });
+                        }
+                    } catch (JSONException e) {
+                        Log.e("RouteParsing", "Error al analizar la ruta", e);
+                        runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Error al analizar los datos de la ruta", Toast.LENGTH_LONG).show());
+                    }
+                } else {
+                    runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Error en la respuesta: " + response.code(), Toast.LENGTH_LONG).show());
+                }
+            }
+
+            private List<GeoPoint> decodePolyline(JSONArray coordinates) {
+                List<GeoPoint> poly = new ArrayList<>();
+                try {
+                    for (int i = 0; i < coordinates.length(); i++) {
+                        JSONArray point = coordinates.getJSONArray(i);
+                        double lon = point.getDouble(0);
+                        double lat = point.getDouble(1);
+                        poly.add(new GeoPoint(lat, lon));
+                    }
+                } catch (JSONException e) {
+                    Log.e("DecodePolyline", "Error decodificando puntos", e);
+                }
+                return poly;
+            }
+
+            private void drawRouteOnMap(List<GeoPoint> decodedPath) {
+                routePolyline.setPoints(decodedPath);
+                mapView.invalidate();
+            }
+        });
     }
 
     @Override
     public void onLocationChanged(Location location) {
         currentLocation = new GeoPoint(location.getLatitude(), location.getLongitude());
 
-        // Si es la primera ubicación, centrar el mapa
-        if (mapView.getMapCenter().getLatitude() == 0 && mapView.getMapCenter().getLongitude() == 0) {
+        if (isFirstLocation) {
             mapController.setCenter(currentLocation);
+            isFirstLocation = false;
         }
     }
 
     @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-    }
-
+    public void onStatusChanged(String provider, int status, Bundle extras) {}
     @Override
-    public void onProviderEnabled(String provider) {
-    }
-
+    public void onProviderEnabled(String provider) {}
     @Override
-    public void onProviderDisabled(String provider) {
-    }
+    public void onProviderDisabled(String provider) {}
 
     @Override
     protected void onResume() {

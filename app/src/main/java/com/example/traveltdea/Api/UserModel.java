@@ -1,4 +1,6 @@
-package com.example.traveltdea;
+package com.example.traveltdea.Api;
+
+import com.example.traveltdea.DeviceInfo;
 
 public class UserModel {
     private String email;
