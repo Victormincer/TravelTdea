@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/splashLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#4A637C"
+    android:gravity="center">
+
+    <!-- Nombre de la app -->
+    <TextView
+        android:id="@+id/appName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TravelTdea"
+        android:textSize="32sp"
+        android:textColor="#FFFFFF"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="40dp"
+        android:layout_alignParentTop="true"
+        android:layout_marginTop="150dp" />
+
+    <!-- Icono del pin -->
+    <ImageView
+        android:id="@+id/iconPin"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:src="@drawable/ic_location_pin"
+        android:layout_below="@id/appName"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="40dp" />
+
+    <!-- Círculo de carga -->
+    <ImageView
+        android:id="@+id/loadingSpinner"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_centerHorizontal="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="120dp"
+        android:src="@drawable/ic_spinner_static" />
+</RelativeLayout>

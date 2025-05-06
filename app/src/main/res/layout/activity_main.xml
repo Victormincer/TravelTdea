@@ -1,57 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:background="#F5FAFA"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
-    tools:context=".MainActivity">
+    android:gravity="center"
+    android:padding="24dp">
+
+    <ImageView
+        android:id="@+id/imageLocation"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:src="@drawable/ic_location"
+        android:contentDescription="Ubicación">
+    </ImageView>
+
 
     <TextView
         android:id="@+id/textTitle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="100dp"
+        android:layout_marginTop="24dp"
         android:text="TravelTdea"
-        android:textSize="34sp"
+        android:textSize="28sp"
         android:textStyle="bold"
-        android:textColor="#3F51B5" />
+        android:textColor="#1B1B1E"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
 
     <TextView
-        android:id="@+id/textDescription"
+        android:id="@+id/textSubtitle"
+        android:layout_marginTop="12dp"
+        android:text="Explora el mundo con precisión"
+        android:textSize="16sp"
+        android:textColor="#444"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/textTitle"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:text="Tu aplicación de navegación"
-        android:textSize="18sp" />
+        android:layout_height="wrap_content" />
 
     <Button
-        android:id="@+id/btnStartNavigation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/textDescription"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="100dp"
-        android:background="@color/colorPrimary"
-        android:text="Comenzar Navegación"
-        android:textColor="#FFFFFF" />
-    <EditText
-        android:id="@+id/emailEditText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Email"
-        android:inputType="textEmailAddress" />
-
-    <EditText
-        android:id="@+id/passwordEditText"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Password"
-        android:layout_below="@id/emailEditText"
-        android:layout_marginTop="16dp"
-        android:inputType="textPassword" />
-
-
-</RelativeLayout>
+        android:id="@+id/btnMap"
+        android:layout_marginTop="48dp"
+        android:layout_width="300dp"
+        android:layout_height="60dp"
+        android:text="IR AL MAPA"
+        android:textAllCaps="true"
+        android:textColor="#FFFFFF"
+        android:backgroundTint="#174EA6"
+        android:layout_gravity="center"
+        android:background="@drawable/rounded_button"/>
+</LinearLayout>

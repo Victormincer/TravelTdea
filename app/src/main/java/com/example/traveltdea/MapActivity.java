@@ -8,11 +8,11 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.util.Log;
 import android.view.View;
-import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -29,9 +29,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.osmdroid.api.IMapController;
 import org.osmdroid.config.Configuration;
+import org.osmdroid.events.MapEventsReceiver;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.MapEventsOverlay;
 import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 import org.osmdroid.views.overlay.compass.CompassOverlay;
@@ -42,23 +44,27 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 public class MapActivity extends AppCompatActivity implements LocationListener {
+    private TextView txtDistance;
+    private TextView txtTime;
+    private TextView txtDistanceIcon;
+    private TextView txtTimeIcon;
+    private View cardInfo;
 
     private static final int PERMISSION_REQUEST_CODE = 100;
+    private static final long ROUTE_UPDATE_INTERVAL_MS = 5000;
 
     private MapView mapView;
-    private MyLocationNewOverlay locationOverlay;
     private IMapController mapController;
+    private MyLocationNewOverlay locationOverlay;
     private LocationManager locationManager;
-    private Button btnCalculateRoute;
-    private Button btnAddDestination;
     private Marker destinationMarker;
     private Polyline routePolyline;
     private GeoPoint currentLocation;
     private GeoPoint destinationPoint;
     private boolean isFirstLocation = true;
+    private long lastRouteTimestamp = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,9 +75,14 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
 
         setContentView(R.layout.activity_map);
 
-        requestLocationPermissions();
-
+        // MOVER INICIALIZACIONES AQUÍ, DESPUÉS DE setContentView()
+        txtDistance = findViewById(R.id.txtDistance);
+        txtTime = findViewById(R.id.txtTime);
+        txtDistanceIcon = findViewById(R.id.txtDistanceIcon);
+        txtTimeIcon = findViewById(R.id.txtTimeIcon);
+        cardInfo = findViewById(R.id.cardInfo);
         mapView = findViewById(R.id.mapView);
+
         mapView.setTileSource(TileSourceFactory.MAPNIK);
         mapView.setMultiTouchControls(true);
         mapView.setBuiltInZoomControls(true);
@@ -84,180 +95,211 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
         locationOverlay.enableFollowLocation();
         mapView.getOverlays().add(locationOverlay);
 
-        CompassOverlay compassOverlay = new CompassOverlay(this, new InternalCompassOrientationProvider(this), mapView);
-        compassOverlay.enableCompass();
-        mapView.getOverlays().add(compassOverlay);
-
-        btnCalculateRoute = findViewById(R.id.btnCalculateRoute);
-        btnAddDestination = findViewById(R.id.btnAddDestination);
+        CompassOverlay compass = new CompassOverlay(this, new InternalCompassOrientationProvider(this), mapView);
+        compass.enableCompass();
+        mapView.getOverlays().add(compass);
 
         routePolyline = new Polyline();
-        routePolyline.setColor(0xFF0000FF);
-        routePolyline.setWidth(10f);
+        routePolyline.setWidth(8f);
+        routePolyline.getOutlinePaint().setStrokeWidth(12f);
+        routePolyline.getOutlinePaint().setAlpha(100);
         mapView.getOverlays().add(routePolyline);
 
-        btnAddDestination.setOnClickListener(v -> addRandomDestination());
-        btnCalculateRoute.setOnClickListener(v -> calculateRoute());
+        MapEventsReceiver receiver = new MapEventsReceiver() {
+            @Override
+            public boolean singleTapConfirmedHelper(GeoPoint p) {
+                setDestinationPoint(p);
+                return true;
+            }
 
+            @Override
+            public boolean longPressHelper(GeoPoint p) {
+                return false;
+            }
+        };
+
+        mapView.getOverlays().add(new MapEventsOverlay(receiver));
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        requestLocationPermissions();
     }
 
     private void requestLocationPermissions() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{
-                    Manifest.permission.ACCESS_FINE_LOCATION
-            }, PERMISSION_REQUEST_CODE);
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSION_REQUEST_CODE);
         } else {
             startLocationUpdates();
         }
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startLocationUpdates();
-            } else {
-                Toast.makeText(this, "Se requieren permisos de ubicación para el funcionamiento de la app", Toast.LENGTH_LONG).show();
-            }
+        if (requestCode == PERMISSION_REQUEST_CODE
+                && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            startLocationUpdates();
+        } else {
+            Toast.makeText(this, "Permiso de ubicación requerido", Toast.LENGTH_LONG).show();
         }
     }
 
     private void startLocationUpdates() {
-        if (locationManager != null && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 10, this);
-        }
-    }
-
-    private void addRandomDestination() {
-        if (currentLocation == null) {
-            Toast.makeText(this, "Esperando ubicación actual...", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        Random random = new Random();
-        double latOffset = (random.nextDouble() - 0.5) * 0.05;
-        double lonOffset = (random.nextDouble() - 0.5) * 0.05;
-
-        destinationPoint = new GeoPoint(
-                currentLocation.getLatitude() + latOffset,
-                currentLocation.getLongitude() + lonOffset);
-
-        if (destinationMarker != null) {
-            mapView.getOverlays().remove(destinationMarker);
-        }
-
-        destinationMarker = new Marker(mapView);
-        destinationMarker.setPosition(destinationPoint);
-        destinationMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-        destinationMarker.setTitle("Destino");
-        mapView.getOverlays().add(destinationMarker);
-        mapView.invalidate();
-
-        Toast.makeText(this, "Destino añadido", Toast.LENGTH_SHORT).show();
-    }
-
-    private void calculateRoute() {
-        if (currentLocation == null || destinationPoint == null) {
-            Toast.makeText(this, "Necesitas una ubicación actual y un destino", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        OkHttpClient client = new OkHttpClient();
-        String apiKey = "c4b2c2c4-c2fe-4d0c-bf1f-140e90757e67"; // Reemplaza con tu clave
-        String baseUrl = "https://graphhopper.com/api/1/route";
-
-        HttpUrl.Builder urlBuilder = HttpUrl.parse(baseUrl).newBuilder();
-        urlBuilder.addQueryParameter("point", currentLocation.getLatitude() + "," + currentLocation.getLongitude());
-        urlBuilder.addQueryParameter("point", destinationPoint.getLatitude() + "," + destinationPoint.getLongitude());
-        urlBuilder.addQueryParameter("vehicle", "car");
-        urlBuilder.addQueryParameter("locale", "es");
-        urlBuilder.addQueryParameter("instructions", "true");
-        urlBuilder.addQueryParameter("points_encoded", "false");
-        urlBuilder.addQueryParameter("key", apiKey);
-
-        String url = urlBuilder.build().toString();
-
-        Request request = new Request.Builder().url(url).build();
-
-        client.newCall(request).enqueue(new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Error al calcular la ruta: " + e.getMessage(), Toast.LENGTH_LONG).show());
+        try {
+            if (locationManager != null
+                    && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                    == PackageManager.PERMISSION_GRANTED) {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 10, this);
             }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                if (response.isSuccessful()) {
-                    String responseData = response.body().string();
-                    try {
-                        JSONObject jsonResponse = new JSONObject(responseData);
-                        JSONArray paths = jsonResponse.getJSONArray("paths");
-
-                        if (paths.length() > 0) {
-                            JSONObject path = paths.getJSONObject(0);
-                            double distance = path.getDouble("distance");
-                            double time = path.getDouble("time");
-
-                            JSONObject pointsJson = path.getJSONObject("points");
-                            JSONArray coordinates = pointsJson.getJSONArray("coordinates");
-
-                            List<GeoPoint> decodedPath = decodePolyline(coordinates);
-
-                            runOnUiThread(() -> {
-                                drawRouteOnMap(decodedPath);
-                                String info = String.format("Distancia: %.1f km, Tiempo: %.1f min", distance / 1000, time / 60000);
-                                Toast.makeText(getApplicationContext(), info, Toast.LENGTH_LONG).show();
-                            });
-                        }
-                    } catch (JSONException e) {
-                        Log.e("RouteParsing", "Error al analizar la ruta", e);
-                        runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Error al analizar los datos de la ruta", Toast.LENGTH_LONG).show());
-                    }
-                } else {
-                    runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Error en la respuesta: " + response.code(), Toast.LENGTH_LONG).show());
-                }
-            }
-
-            private List<GeoPoint> decodePolyline(JSONArray coordinates) {
-                List<GeoPoint> poly = new ArrayList<>();
-                try {
-                    for (int i = 0; i < coordinates.length(); i++) {
-                        JSONArray point = coordinates.getJSONArray(i);
-                        double lon = point.getDouble(0);
-                        double lat = point.getDouble(1);
-                        poly.add(new GeoPoint(lat, lon));
-                    }
-                } catch (JSONException e) {
-                    Log.e("DecodePolyline", "Error decodificando puntos", e);
-                }
-                return poly;
-            }
-
-            private void drawRouteOnMap(List<GeoPoint> decodedPath) {
-                routePolyline.setPoints(decodedPath);
-                mapView.invalidate();
-            }
-        });
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
-    public void onLocationChanged(Location location) {
-        currentLocation = new GeoPoint(location.getLatitude(), location.getLongitude());
+    public void onLocationChanged(Location loc) {
+        if (loc == null) return;
+        currentLocation = new GeoPoint(loc.getLatitude(), loc.getLongitude());
 
         if (isFirstLocation) {
             mapController.setCenter(currentLocation);
             isFirstLocation = false;
         }
+
+        if (destinationPoint != null) {
+            long now = System.currentTimeMillis();
+            if (now - lastRouteTimestamp > ROUTE_UPDATE_INTERVAL_MS) {
+                lastRouteTimestamp = now;
+                calculateRoute();
+            }
+        }
     }
 
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {}
-    @Override
-    public void onProviderEnabled(String provider) {}
-    @Override
-    public void onProviderDisabled(String provider) {}
+    @Override public void onStatusChanged(String s, int i, Bundle b) {}
+    @Override public void onProviderEnabled(String p) {}
+    @Override public void onProviderDisabled(String p) {}
+
+    private void setDestinationPoint(GeoPoint p) {
+        destinationPoint = p;
+
+        runOnUiThread(() -> {
+            if (destinationMarker != null) {
+                mapView.getOverlays().remove(destinationMarker);
+            }
+
+            destinationMarker = new Marker(mapView);
+            destinationMarker.setPosition(destinationPoint);
+            destinationMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+            destinationMarker.setTitle("Destino");
+            mapView.getOverlays().add(destinationMarker);
+            mapView.invalidate();
+
+            if (currentLocation != null) {
+                lastRouteTimestamp = System.currentTimeMillis();
+                calculateRoute();
+            } else {
+                txtDistance.setText("Esperando ubicación...");
+                txtTime.setText("");
+                txtDistanceIcon.setText("0 km");
+                txtTimeIcon.setText("0 min");
+                cardInfo.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    private void calculateRoute() {
+        if (currentLocation == null || destinationPoint == null) return;
+        if (Double.isNaN(currentLocation.getLatitude()) || Double.isNaN(destinationPoint.getLatitude()))
+            return;
+
+        OkHttpClient client = new OkHttpClient();
+        String apiKey = "c4b2c2c4-c2fe-4d0c-bf1f-140e90757e67";
+
+        String url = HttpUrl.parse("https://graphhopper.com/api/1/route").newBuilder()
+                .addQueryParameter("point", currentLocation.getLatitude() + "," + currentLocation.getLongitude())
+                .addQueryParameter("point", destinationPoint.getLatitude() + "," + destinationPoint.getLongitude())
+                .addQueryParameter("vehicle", "car")
+                .addQueryParameter("points_encoded", "false")
+                .addQueryParameter("key", apiKey)
+                .build().toString();
+
+        Request request = new Request.Builder().url(url).build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                runOnUiThread(() -> {
+                    txtDistance.setText("Sin ruta");
+                    txtTime.setText("");
+                    txtDistanceIcon.setText("0 km");
+                    txtTimeIcon.setText("0 min");
+                    cardInfo.setVisibility(View.VISIBLE);
+                });
+            }
+
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (!response.isSuccessful() || response.body() == null) {
+                    runOnUiThread(() -> {
+                        txtDistance.setText("Sin ruta");
+                        txtTime.setText("");
+                        txtDistanceIcon.setText("0 km");
+                        txtTimeIcon.setText("0 min");
+                        cardInfo.setVisibility(View.VISIBLE);
+                    });
+                    return;
+                }
+
+                try {
+                    String json = response.body().string();
+                    JSONObject body = new JSONObject(json);
+
+                    if (!body.has("paths")) throw new JSONException("Falta 'paths'");
+
+                    JSONArray paths = body.getJSONArray("paths");
+                    if (paths.length() == 0) throw new JSONException("Lista de rutas vacía");
+
+                    JSONObject path = paths.getJSONObject(0);
+                    double distanceMeters = path.getDouble("distance");
+                    long timeMillis = path.getLong("time");
+
+                    JSONObject points = path.getJSONObject("points");
+                    JSONArray coords = points.getJSONArray("coordinates");
+                    List<GeoPoint> pts = new ArrayList<>();
+
+                    for (int i = 0; i < coords.length(); i++) {
+                        JSONArray pt = coords.getJSONArray(i);
+                        pts.add(new GeoPoint(pt.getDouble(1), pt.getDouble(0)));
+                    }
+
+                    String distanciaKm = String.format("%.2f km", distanceMeters / 1000.0);
+                    String tiempoMin = String.format("%.0f min", timeMillis / 60000.0);
+
+                    runOnUiThread(() -> {
+                        routePolyline.setPoints(pts);
+                        mapView.invalidate();
+                        txtDistance.setText("");
+                        txtTime.setText("");
+                        txtDistanceIcon.setText(distanciaKm);
+                        txtTimeIcon.setText(tiempoMin);
+                        cardInfo.setVisibility(View.VISIBLE);
+                    });
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> {
+                        txtDistance.setText("Sin ruta");
+                        txtTime.setText("");
+                        txtDistanceIcon.setText("0 km");
+                        txtTimeIcon.setText("0 min");
+                        cardInfo.setVisibility(View.VISIBLE);
+                    });
+                }
+            }
+        });
+    }
 
     @Override
     protected void onResume() {
@@ -271,9 +313,14 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
         super.onPause();
         mapView.onPause();
         if (locationManager != null) {
-            locationManager.removeUpdates(this);
+            try {
+                locationManager.removeUpdates(this);
+            } catch (SecurityException e) {
+                e.printStackTrace();
+            }
         }
     }
 }
+
 
 

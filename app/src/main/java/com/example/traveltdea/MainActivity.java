@@ -17,25 +17,20 @@ import android.widget.EditText;
 public class MainActivity extends AppCompatActivity {
 
     private Button btnStartNavigation;
-    private EditText emailEditText;
-    private EditText passwordEditText;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        btnStartNavigation = findViewById(R.id.btnStartNavigation);
-        emailEditText = findViewById(R.id.emailEditText);
-        passwordEditText = findViewById(R.id.passwordEditText);
+        btnStartNavigation = findViewById(R.id.btnMap);
+
 
 
                 btnStartNavigation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                String email = emailEditText.getText().toString();
-                String password = passwordEditText.getText().toString();
 
                 // Aquí puedes agregar la lógica para validar el correo electrónico y la contraseña
                 // y hacer una llamada a la API si es necesario.
