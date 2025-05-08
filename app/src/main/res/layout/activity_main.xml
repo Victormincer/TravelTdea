@@ -49,12 +49,12 @@
 
     <TextView
         android:id="@+id/AndroidId"
-        android:layout_width="match_parent"
+        android:layout_width="269dp"
         android:layout_height="wrap_content"
+        android:layout_marginTop="320dp"
+        android:layout_marginBottom="4dp"
+        android:gravity="center"
         android:text="ID del dispositivo"
         android:textColor="#888888"
-        android:textSize="12sp"
-        android:gravity="center"
-        android:layout_marginTop="8dp"
-        android:layout_marginBottom="4dp"/>
+        android:textSize="12sp" />
 </LinearLayout>
