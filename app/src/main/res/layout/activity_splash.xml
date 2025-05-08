@@ -24,7 +24,7 @@
         android:id="@+id/iconPin"
         android:layout_width="80dp"
         android:layout_height="80dp"
-        android:src="@drawable/ic_location_pin"
+        android:src="@drawable/ic_location_splash"
         android:layout_below="@id/appName"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="40dp" />

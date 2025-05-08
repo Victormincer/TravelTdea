@@ -1,100 +1,170 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:card_view="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/frameRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MapActivity">
 
+    <!-- Mapa -->
     <org.osmdroid.views.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <androidx.cardview.widget.CardView
-        android:id="@+id/cardInfo"
+    <!-- Layout vertical para overlays -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_margin="16dp"
-        android:visibility="gone"
-        card_view:cardCornerRadius="16dp"
-        card_view:cardElevation="8dp">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
 
-        <!-- Contenedor general de contenido de la tarjeta -->
-        <LinearLayout
+        <!-- Botón para mostrar/ocultar la tarjeta -->
+        <ImageView
+            android:id="@+id/toggleCardBtn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:background="@android:color/white"
+            android:padding="12dp"
+            android:elevation="4dp"
+            android:src="@drawable/ic_arrow_up"
+            android:contentDescription="Toggle card"
+            android:clickable="true"
+            android:focusable="true" />
+
+        <!-- Espaciado -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="8dp" />
+
+        <!-- Barra de búsqueda -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/searchCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            card_view:cardElevation="6dp"
+            card_view:cardCornerRadius="32dp">
 
-            <!-- Distancia y tiempo en texto -->
-            <TextView
-                android:id="@+id/txtDistance"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Distancia: "
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/txtTime"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Tiempo: "
-                android:textSize="18sp"
-                android:textStyle="bold" />
-
-            <!-- Panel inferior con íconos y texto -->
             <LinearLayout
-                android:id="@+id/infoPanel"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingTop="16dp"
-                android:gravity="center_horizontal">
+                android:orientation="horizontal"
+                android:padding="12dp"
+                android:gravity="center_vertical">
 
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@android:drawable/ic_menu_search"
+                    android:contentDescription="Buscar" />
+
+                <EditText
+                    android:id="@+id/searchInput"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:minHeight="48dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:hint="Buscar ubicación..."
+                    android:textColor="#000"
+                    android:textColorHint="#999"
+                    android:background="@android:color/transparent"
+                    android:inputType="text"
+                    android:imeOptions="actionSearch"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Espaciado -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="16dp" />
+
+        <!-- Tarjeta de información -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            card_view:cardCornerRadius="16dp"
+            card_view:cardElevation="8dp"
+            android:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:padding="16dp"
+                android:gravity="center_vertical"
+                android:baselineAligned="false"
+                android:weightSum="2">
+
+                <!-- Distancia -->
                 <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="60dp"
-                    android:orientation="horizontal"
-                    android:padding="12dp"
-                    android:background="@drawable/info_panel_bg"
-                    android:gravity="center_vertical"
-                    android:layout_gravity="center_horizontal"
-                    android:layout_marginBottom="8dp">
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal">
 
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_location_pin"
-                        android:layout_marginEnd="8dp" />
+                        android:contentDescription="Icono ubicación" />
 
                     <TextView
                         android:id="@+id/txtDistanceIcon"
-                        android:layout_marginEnd="24dp"
-                        android:text="0 km"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"/>
+                        android:text="0 km"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#000" />
+
+                    <TextView
+                        android:id="@+id/txtDistance"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Distancia"
+                        android:textSize="14sp"
+                        android:textColor="#555" />
+                </LinearLayout>
+
+                <!-- Tiempo -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal">
 
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
                         android:src="@drawable/ic_time"
-                        android:layout_marginEnd="8dp" />
+                        android:contentDescription="Icono tiempo" />
 
                     <TextView
                         android:id="@+id/txtTimeIcon"
-                        android:text="0 min"
-                        android:textColor="#FFFFFF"
-                        android:textSize="16sp"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_width="wrap_content"/>
+                        android:text="0 min"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#000" />
 
+                    <TextView
+                        android:id="@+id/txtTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tiempo estimado"
+                        android:textSize="14sp"
+                        android:textColor="#555" />
                 </LinearLayout>
             </LinearLayout>
-        </LinearLayout>
-    </androidx.cardview.widget.CardView>
-
-</RelativeLayout>
+        </androidx.cardview.widget.CardView>
+    </LinearLayout>
+</FrameLayout>
