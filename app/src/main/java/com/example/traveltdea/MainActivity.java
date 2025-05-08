@@ -13,10 +13,12 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 
 public class MainActivity extends AppCompatActivity {
 
     private Button btnStartNavigation;
+    private TextView deviceInfoTextView;
 
 
     @Override
@@ -25,10 +27,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         btnStartNavigation = findViewById(R.id.btnMap);
+        deviceInfoTextView = findViewById(R.id.AndroidId);
 
+        String deviceId = DeviceInfo.getDeviceId(this);
+        String info = "ID:"+ deviceId;
+        deviceInfoTextView.setText(info);
 
-
-                btnStartNavigation.setOnClickListener(new View.OnClickListener() {
+        btnStartNavigation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
 
