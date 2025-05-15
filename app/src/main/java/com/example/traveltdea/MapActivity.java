@@ -24,6 +24,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
@@ -51,6 +52,7 @@ import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class MapActivity extends AppCompatActivity implements LocationListener {
     private TextView txtDistance, txtTime, txtDistanceIcon, txtTimeIcon;
@@ -146,6 +148,8 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         requestLocationPermissions();
     }
+
+    //Metodo para realizar  busqueda
     private void searchPlace(String placeName) {
         OkHttpClient client = new OkHttpClient();
 
@@ -165,12 +169,14 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
 
         client.newCall(request).enqueue(new Callback() {
             @Override
+            //metodo para manejar errores
             public void onFailure(Call call, IOException e) {
                 runOnUiThread(() -> Toast.makeText(MapActivity.this, "Error de red", Toast.LENGTH_SHORT).show());
                 e.printStackTrace();
             }
 
             @Override
+            //metodo para manejar respuesta
             public void onResponse(Call call, Response response) throws IOException {
                 if (!response.isSuccessful() || response.body() == null) {
                     runOnUiThread(() -> Toast.makeText(MapActivity.this, "Lugar no encontrado", Toast.LENGTH_SHORT).show());
@@ -219,9 +225,7 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
             }
         });
     }
-
-
-
+    //metodo para animación de menu
     private void toggleCardInfo() {
         int startHeight = isCardVisible ? cardInfo.getHeight() : 0;
         cardInfo.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED);
@@ -247,9 +251,9 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
 
         animator.start();
         isCardVisible = !isCardVisible;
-        toggleCardBtn.setImageResource(isCardVisible ? R.drawable.ic_arrow_down : R.drawable.ic_arrow_up);
+        toggleCardBtn.setImageResource(isCardVisible ? R.drawable.ic_arrow_up : R.drawable.ic_arrow_down);
     }
-
+    //solicitar permisos de ubicación
     private void requestLocationPermissions() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -313,7 +317,7 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
                 lastRouteTimestamp = now;
                 lastRouteLocation = currentLocation;
 
-              
+
                 if (distanceMoved >= 50) {
                     calculateRoute();
                 } else {
@@ -323,6 +327,7 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
             }
         }
     }
+    //metodo para actualizar la distancia y tiempo
     private void updateDistanceAndTimeText(Location location) {
         if (routePolyline == null || currentLocation == null) return;
 
@@ -371,7 +376,7 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
         txtTimeIcon.setText(tiempoMin);
     }
 
-
+ //metodo para actualizar la ruta
     private void updateRoutePolyline(GeoPoint userLocation) {
         if (routePolyline == null || routePolyline.getActualPoints().isEmpty()) return;
 
@@ -402,9 +407,10 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
             mapView.invalidate();
         }
     }
-
+ //metodo para establecer el destino
     private void setDestinationPoint(GeoPoint p) {
         destinationPoint = p;
+
         runOnUiThread(() -> {
             if (destinationMarker != null) {
                 mapView.getOverlays().remove(destinationMarker);
@@ -413,24 +419,74 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
             destinationMarker = new Marker(mapView);
             destinationMarker.setPosition(destinationPoint);
             destinationMarker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
-            destinationMarker.setTitle("Destino");
+            destinationMarker.setTitle("Buscando nombre..."); // Temporal
             mapView.getOverlays().add(destinationMarker);
             mapView.invalidate();
+        });
 
-            if (currentLocation != null) {
-                lastRouteTimestamp = System.currentTimeMillis();
-                calculateRoute();
-            } else {
+        // Construir URL para Nominatim
+        String url = String.format(Locale.US,
+                "https://nominatim.openstreetmap.org/reverse?format=json&lat=%f&lon=%f&zoom=18&addressdetails=1",
+                destinationPoint.getLatitude(), destinationPoint.getLongitude());
+
+        OkHttpClient client = new OkHttpClient();
+        Request request = new Request.Builder()
+                .url(url)
+                .header("User-Agent", "traveltdea-app") // IMPORTANTE para evitar errores de bloqueo
+                .build();
+
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(Call call, IOException e) {
+                runOnUiThread(() -> {
+                    destinationMarker.setTitle("Destino");
+                    mapView.invalidate();
+                });
+            }
+            //metodo para obtener el nombre del destino
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    String json = response.body().string();
+                    try {
+                        JSONObject jsonObject = new JSONObject(json);
+                        String displayName = jsonObject.optString("display_name", "Destino");
+
+                        runOnUiThread(() -> {
+                            destinationMarker.setTitle(displayName);
+                            mapView.invalidate();
+                        });
+                    } catch (JSONException e) {
+                        runOnUiThread(() -> {
+                            destinationMarker.setTitle("Destino");
+                            mapView.invalidate();
+                        });
+                    }
+                } else {
+                    runOnUiThread(() -> {
+                        destinationMarker.setTitle("Destino");
+                        mapView.invalidate();
+                    });
+                }
+            }
+        });
+
+        if (currentLocation != null) {
+            lastRouteTimestamp = System.currentTimeMillis();
+            calculateRoute();
+        } else {
+            runOnUiThread(() -> {
                 txtDistance.setText("Distancia");
                 txtTime.setText("Tiempo estimado");
                 txtDistanceIcon.setText("0 km");
                 txtTimeIcon.setText("0 min");
                 cardInfo.setVisibility(View.VISIBLE);
-                Toast.makeText(MapActivity.this, "Esperando conexión", Toast.LENGTH_SHORT).show();
-            }
-        });
+                Toast.makeText(MapActivity.this, "Esperando conexión GPS", Toast.LENGTH_SHORT).show();
+            });
+        }
     }
 
+ //metodo para calcular la ruta
     private void calculateRoute() {
         if (currentLocation == null || destinationPoint == null) return;
 
@@ -446,7 +502,8 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
                 .build().toString();
 
         Request request = new Request.Builder().url(url).build();
-        client.newCall(request).enqueue(new Callback() {
+        client.newCall(request).enqueue(new Callback(){
+            //metodo para manejar errores
             @Override public void onFailure(Call call, IOException e) {
                 runOnUiThread(() -> {
                     txtDistance.setText("Distancia");
@@ -454,11 +511,11 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
                     txtDistanceIcon.setText("0 km");
                     txtTimeIcon.setText("0 min");
                     cardInfo.setVisibility(View.VISIBLE);
-                    Toast.makeText(MapActivity.this, "Esperando conexión", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MapActivity.this, "Esperando conexión GPS", Toast.LENGTH_SHORT).show();
 
                 });
             }
-
+            //metodo para manejar respuesta
             @Override public void onResponse(Call call, Response response) throws IOException {
                 if (!response.isSuccessful() || response.body() == null) {
                     runOnUiThread(() -> {
@@ -467,7 +524,7 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
                         txtDistanceIcon.setText("0 km");
                         txtTimeIcon.setText("0 min");
                         cardInfo.setVisibility(View.VISIBLE);
-                        Toast.makeText(MapActivity.this, "Esperando conexión", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MapActivity.this, "Esperando conexión GPS", Toast.LENGTH_SHORT).show();
                     });
                     return;
                 }
@@ -498,6 +555,7 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
                         txtDistanceIcon.setText(distanciaKm);
                         txtTimeIcon.setText(tiempoMin);
                         cardInfo.setVisibility(View.VISIBLE);
+
                     });
 
                 } catch (JSONException e) {
@@ -507,19 +565,19 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
                         txtDistanceIcon.setText("0 km");
                         txtTimeIcon.setText("0 min");
                         cardInfo.setVisibility(View.VISIBLE);
-                        Toast.makeText(MapActivity.this, "Esperando conexión", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MapActivity.this, "Esperando GPS", Toast.LENGTH_SHORT).show();
                     });
                 }
             }
         });
     }
-
+  //metodo para manejar ciclo de vida
     @Override protected void onResume() {
         super.onResume();
         mapView.onResume();
         startLocationUpdates();
     }
-
+  //metodo para manejar ciclo de vida
     @Override protected void onPause() {
         super.onPause();
         mapView.onPause();
@@ -531,7 +589,7 @@ public class MapActivity extends AppCompatActivity implements LocationListener {
             }
         }
     }
-
+    //metodo para manejar ciclo de vida
     @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
     @Override public void onProviderEnabled(String provider) {}
     @Override public void onProviderDisabled(String provider) {}
