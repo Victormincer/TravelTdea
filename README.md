@@ -1,8 +1,7 @@
 TravelTdea - Aplicación de Navegación para Android
 TravelTdea es una completa aplicación de navegación para dispositivos Android construida con OpenStreetMap e integración de la API de GraphHopper. La aplicación proporciona una interfaz fácil de usar para buscar ubicaciones, planificar rutas y obtener guías de navegación en tiempo real.
-Mostrar imagen
-Características
 
+Características
 Interfaz de Mapa Interactiva: Construida con OpenStreetMap para datos de mapas detallados y actualizados
 Búsqueda de Ubicaciones: Encuentra cualquier lugar en el mundo con funcionalidad de búsqueda por texto
 Destinos con un Solo Toque: Establece destinos fácilmente tocando cualquier parte del mapa
@@ -70,7 +69,7 @@ git clone https://github.com/tunombredeusuario/traveltdea.git
 
 Abre el proyecto en Android Studio
 Reemplaza la clave de API de GraphHopper en MapActivity.java:
-javaString apiKey = "TU_CLAVE_API_AQUI";
+javaString apiKey = "c4b2c2c4-c2fe-4d0c-bf1f-140e90757e67";
 
 Compila y ejecuta la aplicación en tu dispositivo Android o emulador
 
@@ -107,21 +106,14 @@ Optimización del uso de red:
 Las rutas solo se recalculan cuando es necesario
 Las consultas de búsqueda se limitan a resultados únicos para reducir el uso de datos
 
-
-
 Contribuciones
 ¡Las contribuciones son bienvenidas! Si deseas mejorar TravelTdea, por favor:
 
-Haz un fork del repositorio
-Crea una rama de características: git checkout -b nueva-caracteristica
-Confirma tus cambios: git commit -am 'Añadir nueva característica'
-Envía a la rama: git push origin nueva-caracteristica
-Envía una solicitud de extracción (pull request)
 
 Licencia
 Este proyecto está licenciado bajo la Licencia libre de uso.
-Agradecimientos
 
+Agradecimientos
 OpenStreetMap por proporcionar datos de mapas gratuitos
 OSMDroid por la biblioteca OpenStreetMap para Android
 GraphHopper por la API de rutas
