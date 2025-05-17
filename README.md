@@ -69,7 +69,7 @@ git clone https://github.com/tunombredeusuario/traveltdea.git
 
 Abre el proyecto en Android Studio
 Reemplaza la clave de API de GraphHopper en MapActivity.java:
-javaString apiKey = "c4b2c2c4-c2fe-4d0c-bf1f-140e90757e67";
+javaString apiKey = "SuscriptionKey";
 
 Compila y ejecuta la aplicación en tu dispositivo Android o emulador
 
